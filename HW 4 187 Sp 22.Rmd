@@ -1,0 +1,303 @@
+---
+title: 'Stat/CS 187: Homework 4'
+author: "yourname"
+date: "Spring 2022"
+output:
+  pdf_document:
+    toc: yes
+  html_document:
+    toc: yes
+    df_print: paged
+---
+  
+
+
+```{r setup, message = FALSE}
+
+## Set the default size of figures
+knitr::opts_chunk$set(echo = TRUE) 
+
+knitr::opts_chunk$set(echo = TRUE,
+                      fig.width=8, 
+                      fig.height=5) 
+
+# Load the packages we will be using
+pacman::p_load(hexmode,ggthemes) 
+
+library(dplyr)
+library(ggplot2)
+library(ggthemes)
+library(readr)
+
+```  
+
+
+
+## 1. Insurify DUI Graph
+
+```{r Q1_Data}
+dui <- tribble(
+  ~ model,           ~ rate,    ~ specific,
+  "RAM 2500",            45.3,       "Yes",
+  "Chevyrolet S-10",     35.9,       "Yes",
+  "BMW 4-Series",        31.7,       "Yes",
+  "AUDI A4",             31.1,       "Yes",
+  "Dodge Dakota",        30.5,       "Yes",
+  "Subaru WRX",          30.0,       "Yes",
+  "BMW 7-Series",        29.0,       "Yes",
+  "Ford Ranger",         28.9,       "Yes",
+  "Chevrolet Silverado", 28.3,       "Yes",
+  "GMC Sierra",          28.0,       "Yes",
+  "Nat'l Average",       17.9,        "No"
+)
+```
+
+
+
+### Part 1a) 
+
+```{r 1a_basicGraph}
+# plot gg_dui as basic plot
+gg_dui<-
+  ggplot(data=dui,
+         mapping=aes(x=rate,
+                     y=reorder(model,rate),  # reorder 
+                     fill=specific))+   # different color for groups
+  geom_col(show.legend = FALSE)+     # hide legend for specific
+# add title, subtitle,xlab and caption, also remove ylab  
+  labs(title= "ISURIFY",
+       subtitle = "Car Models with the Most DUIs",
+       x= "Drivers per 1,000 with one or more DUIs citations on their record",
+       y="",
+       caption = "Source: Insurify analysis of over 2.7 million car insuarance applications")
+
+
+  
+  
+# Making sure your knitted document shows the resulting plot
+gg_dui
+```
+
+
+
+
+
+
+### Part 1b) 
+
+```{r 1b_intermediateGraph}
+# choose color
+color_manual<-c("#6699CC","#660033")
+
+# plot gg_dui2 based on gg_dui
+gg_dui2 <- 
+  gg_dui + theme_test()+    # change theme
+# set scales and change breaks for x-axis
+  scale_x_continuous(breaks=c(0,5,10,15,20,25,30,35,40,45,50), 
+                     expand = expansion(mult = 0,
+                                        add = c(0, 5)))+
+# apply color designed into groups for dui$specific
+  scale_fill_manual(values=color_manual)
+
+
+  
+# show gg_dui2
+gg_dui2
+```
+
+
+
+
+### Part 1c) 
+
+```{r 1c_finalGraph}
+# change theme for non-data ink options
+gg_dui2 + theme_tufte(ticks=FALSE)+
+# add vertical line at x=0
+  theme(axis.line.y = element_line(size=1,colour="black",linetype=1),
+# change color & size of subtitle and size & position of subtitle
+        plot.title= element_text(size=12,colour="#FF6633"),
+        plot.subtitle = element_text(size=20,hjust=0.5))
+        
+  
+
+
+```
+
+
+
+
+
+
+
+
+
+## 2. Mapping income and unemployment
+
+```{r Q2_setup}
+# Read in data files:
+US_2019_C <- read_csv("USDA_2019_County.csv")
+US_2019_S <- read_csv("USDA_2019_State.csv")
+
+
+## Set the default size of figures
+knitr::opts_chunk$set(fig.width=8, fig.height=5)
+
+# Changing the default theme
+theme_set(theme_bw())
+
+# Load the libraries we will be using
+pacman::p_load(gapminder,socviz, tidyverse, grid,usmap, maps, statebins, viridis, leaflet)
+
+
+# A map theme provided by our book:
+theme_map <- function(base_size=9, base_family="") {
+    require(grid)
+    theme_bw(base_size=base_size, base_family=base_family) %+replace%
+        theme(axis.line=element_blank(),
+              axis.text=element_blank(),
+              axis.ticks=element_blank(),
+              axis.title=element_blank(),
+              panel.background=element_blank(),
+              panel.border=element_blank(),
+              panel.grid=element_blank(),
+              panel.spacing=unit(0, "lines"),
+              plot.background=element_blank(),
+              legend.justification = c(0,0),
+              legend.position = c(0,0)
+              )
+}
+
+
+```
+
+
+
+### 2a) Simple US Map
+
+```{r 2a_simplemap}
+
+#  Use package usmap, and employment data 
+plot_usmap(regions = c('state'),
+           data = data.frame(US_2019_S),
+           values= "Median_Household_Income_2019") +
+# choose color reasonably close
+  scale_fill_continuous(low = 'gold1', high = 'orchid4')+
+# add title at center and remove legend title
+  labs(title="2019 Median Household Income") + 
+  theme(plot.title = element_text(size=15,hjust=0.5),
+        legend.title = element_blank())
+
+
+
+
+```
+
+
+
+
+### 2b) For more serious maps: Merge state lines info with USDA data.
+
+```{r 2b_mergedata}
+# create state_lines using the map_data function like we did in class
+state_lines <- map_data("state")
+head(state_lines)
+# clean data and change region to state for merge
+state_lines<- state_lines%>%
+  mutate(state=region)%>%
+  select(-region,-subregion)
+
+# change state to all lowercase
+US_2019_S$state<-tolower(US_2019_S$state)
+
+# merge data
+US <- US_2019_S %>% 
+  left_join(y = state_lines,
+            by = 'state')
+
+```
+
+
+
+
+### 2c) Map a Numeric variable by State: Median Income in 2019
+
+```{r 2c_mapnumeric}
+
+
+ggplot(data = US,
+         mapping = aes(x = long, 
+                       y = lat, 
+                       group = group))  +
+  
+  geom_polygon(aes(fill = US$Median_Household_Income_2019),color="white")  + 
+  
+  theme_map() + 
+  coord_map(projection = "albers", 
+            lat0 = 39, lat1 = 45)+
+  
+# choose color reasonably close  
+  scale_fill_gradient(low = 'lightblue2', high = 'green4' )+
+  
+# add title at center and remove legend title
+  labs(title="2019 Median Household Income") + 
+  
+  theme(plot.title = element_text(size=15,hjust=0.5),
+        legend.title = element_blank())
+
+```
+
+### 2d) Now map data at a county level. First, the data, merged with county map info
+
+```{r 2d_countydata}
+# county_map is a data frame in socviz -- do help(county_map) to see more
+?county_map
+
+#create a new data frame using county_map data
+new_cmap<-county_map%>% 
+  select_all()%>%
+# create a variable called FIPS
+  mutate(FIPS = id)%>%
+# drop id
+  select(-id)
+# change FIPS to numeric values
+new_cmap$FIPS <- as.numeric(new_cmap$FIPS)
+
+
+# merge the two together
+US2 <- US_2019_C %>% 
+  left_join(y = new_cmap,
+            by = 'FIPS')
+
+# Print the first 6 rows of the resulting data set
+head(US2)
+
+
+
+```
+
+### 2e) Map Median Household Income by county:
+
+**Map income by county, matching the map below, in terms of colors (pretty close is fine), title, legend label, font size, theme, etc.**
+
+```{r 2e_countymap}
+US2$Income<-US2$Median_Household_Income_2019
+ggplot(data = US2,
+         mapping = aes(x = long, y = lat,
+                       fill=Income,
+                       group = group
+                       ))+
+  
+  geom_polygon(size=0.05)+
+  theme_map()+  
+# choose color reasonably close  
+#  scale_fill_continuous(low="white",high="blue")+
+  scale_fill_gradient(low="lightcyan",high="darkblue",na.value="gray")+
+# add title at center and remove legend title
+  labs(title="2019 Median Income") + 
+  theme(plot.title = element_text(size=15,hjust=0.5),
+        legend.title=element_text(size=15))
+
+
+```
+
