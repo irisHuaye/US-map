@@ -1,0 +1,294 @@
+---
+title: "Stat/CS 187: Homework 4"
+author: "yourname"
+date: "Spring 2022"
+output: 
+  html_document:
+      toc: true
+      df_print:  paged 
+---
+
+  
+When creating your Rmd script, be sure that all code will show up in the knitted document. Once you get your code working, do suppress messages and warnings -- only as needed (i.e., don't just remove them for every code chunk)
+  
+
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE,
+                      fig.width=8, 
+                      fig.height=5) 
+
+# Load the packages we will be using
+pacman::p_load(socviz, tidyverse, usmap, 
+               maps, statebins, grid)
+
+
+```  
+
+
+
+## 1. Insurify DUI Graph
+
+```{r Q1_Data}
+dui <- tribble(
+  ~ model,           ~ rate,    ~ specific,
+  "RAM 2500",            45.3,       "Yes",
+  "Chevyrolet S-10",     35.9,       "Yes",
+  "BMW 4-Series",        31.7,       "Yes",
+  "AUDI A4",             31.1,       "Yes",
+  "Dodge Dakota",        30.5,       "Yes",
+  "Subaru WRX",          30.0,       "Yes",
+  "BMW 7-Series",        29.0,       "Yes",
+  "Ford Ranger",         28.9,       "Yes",
+  "Chevrolet Silverado", 28.3,       "Yes",
+  "GMC Sierra",          28.0,       "Yes",
+  "Nat'l Average",       17.9,        "No"
+)
+```
+
+
+
+### Part 1a) Basic Graph
+
+Create the basic graph shown in the word document. Save it as gg_dui and make sure it is shown below the codechunk.
+
+```{r 1a_basicGraph}
+gg_dui <- 
+  ggplot(data = dui,
+         mapping = aes(x = rate,
+                       y = reorder(model, rate))) +
+  
+  geom_col(mapping = aes(fill = specific),
+           show.legend = F) +
+  
+  labs(x = "Drivers per 1,000 with one or more DUI citations on their record",
+       y = NULL,
+       title = "iNSURiFY",
+       subtitle = "Car Models with the Most DUIs",
+       caption = "Source: Insurify analysis of over 2.7 million car insuarance applications") + 
+  theme_grey()
+
+gg_dui
+```
+
+
+
+
+
+
+### Part 1b) Theme and color choice
+
+Add the additional changes by choosing the correct theme and specifying choices for the x & y-axis and color of the bars so they match the graph shown in 1b of the word document.
+
+Save it as *gg_dui2*. Make sure that it appears below the code chunk in your knitted document
+
+```{r 1b_intermediateGraph}
+gg_dui2 <- 
+  gg_dui +
+  
+  theme_test() +
+  
+  scale_x_continuous(breaks = seq(0,50,5),
+                     expand = expansion(mult = 0,
+                                        add = c(0, 5))) +
+  
+  scale_fill_discrete(type = c(Yes = "#660033",
+                               No = "#6699CC")) 
+
+gg_dui2
+```
+
+
+
+
+### Part 1c) Use theme to alter non-data ink
+
+Use different arguments in theme() to change the non-data ink options to create the plot shown in the word document.
+
+```{r 1c_finalGraph}
+gg_dui2 +
+  
+  geom_vline(xintercept = 0) +
+  
+  theme(panel.grid = element_blank(),
+        panel.border = element_blank(),
+        axis.ticks = element_blank(),
+        
+        plot.title = element_text(size = 12, 
+                                  color = "#FF6633", 
+                                  face = "bold"),
+        
+        plot.subtitle = element_text(size = 18, 
+                                     face = "bold",
+                                     hjust = 0.5),
+        
+        
+        axis.title.x = element_text(size = 10,
+                                    face = "bold"),
+        
+        plot.caption = element_text(face = "italic"))
+```
+
+
+
+
+
+
+
+
+
+## 2. Mapping income and unemployment
+
+Set Up Your Project and Load Libraries
+
+We'll use income and unemployment data from the USDA for Question 2. 
+
+Read in the data files USDA2019.csv and USDA2019state.csv
+
+It would be a good idea to clear out your global environment before starting question 2!
+
+```{r Q2_setup}
+# Read in data files:
+usda_c <- read.csv('USDA_2019_County.csv')
+usda_s <- read.csv('USDA_2019_State.csv')
+
+
+# A map theme provided by our book:
+theme_map <- function(base_size=9, base_family="") {
+    require(grid)
+    theme_bw(base_size=base_size, base_family=base_family) +
+        theme(axis.line=element_blank(),
+              axis.text=element_blank(),
+              axis.ticks=element_blank(),
+              axis.title=element_blank(),
+              panel.background=element_blank(),
+              panel.border=element_blank(),
+              panel.grid=element_blank(),
+              panel.spacing=unit(0, "lines"),
+              plot.background=element_blank(),
+              legend.justification = c(0,0),
+              legend.position = c(0,0),
+              plot.title = element_text(hjust = 0.5)
+              )
+}
+
+```
+
+
+
+### 2a) Simple US Map
+
+Using plot_usmap(), make the map shown in the word document. 
+
+Try to match colors reasonably well, and remove the legend title.
+
+```{r 2a_simplemap}
+#  Use package usmap, and employment data 
+plot_usmap(data = usda_s,
+           regions = 'states',
+           values = 'Median_Household_Income_2019',  # variable to graph
+           color = 'white') +
+  
+  scale_fill_continuous(low = 'gold',
+                        high = 'darkblue') +
+  
+  labs(title = "2019 Median Household Income") +
+  
+  theme(legend.title = element_blank(),
+        plot.title = element_text(hjust = 0.5, 
+                                  size = 14))
+```
+
+
+
+
+### 2b) For more serious maps: Merge state lines info with USDA data.
+
+Now, prepare to use the more 'serious' method of making a US map.  
+
+First, save the data frame that contains the boundary lines for each state as we did in chapter 7.
+
+Then merge the state USDA income data with map data you just created.
+
+```{r 2b_mergedata}
+us_states <- map_data("state")
+
+us_states_usda <- 
+  usda_s %>% 
+  mutate(region = tolower(state))
+```
+
+
+
+
+### 2c) Map a Numeric variable by State: Median Income in 2019
+
+Create the map shown in the word doc, matching the theme, title, legend label (none), font size, colors (colors don't have to be perfect). 
+
+```{r 2c_mapnumeric}
+ggplot(data = us_states_usda,
+       mapping = aes(x = long, 
+                     y = lat, 
+                     group = group, 
+                     fill = Median_Household_Income_2019)) +
+  
+  geom_polygon(color = 'gray90', 
+               size = 0.2) +
+  
+  coord_map(projection = "albers", 
+            lat0 = 39, 
+            lat1 = 45)  +
+  
+  theme_map() + 
+  
+  labs(title = '2019 Median Household Income',
+       fill = NULL) +
+  
+  scale_fill_gradient(low = 'slategray1', 
+                      high = 'green4') +
+  
+  theme(title = element_text(hjust = 0.5, 
+                             size = 14,
+                             face = "bold"))
+```
+
+### 2d) Now map data at a county level. First, the data, merged with county map info
+
+Merge the USDA county data with the county map data, as we did in chapter 7.  You will need to make a variable common to both files, in order to merge. To do this, use the data frame county_map, in the socviz package.  Don’t change county_map, but use it to create a new data frame with a variable called FIPS.  Since FIPS is numeric in the USDA data, you will need to make FIPS numeric in the new map data, too.
+
+```{r 2d_countydata}
+# county_map is a data frame in socviz -- do help(county_map) to see more
+county_map2 <- county_map %>%  mutate(FIPS = as.numeric(id))
+
+# merge the two together
+county_usda <- county_map2 %>% left_join(usda_c, by = "FIPS")
+
+# Print the first 6 rows of the resulting data set
+head(county_usda)
+
+```
+
+### 2e) Map Median Household Income by county:
+
+Map income by county, matching the map below, in terms of colors (pretty close is fine), title, legend label, font size, theme, etc.
+
+```{r 2e_countymap}
+ggplot(data = county_usda,
+       mapping = aes(x = long, 
+                     y = lat)) +
+  geom_polygon(mapping = aes(group = group,  
+                             fill = Median_Household_Income_2019)) +
+  
+  coord_equal() +
+  
+  scale_fill_gradient(low = 'lightcyan', 
+                      high = 'darkblue') +
+  
+  theme_map() +
+  
+  labs(title = '2019 Median Income',  
+       fill = 'Income')  +
+  
+  theme(title = element_text(size = 14,
+                             face = "bold"))
+```
+
